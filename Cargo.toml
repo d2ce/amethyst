@@ -1,86 +1,29 @@
 [package]
-name = "amethyst"
-version = "0.5.1"
-authors = ["Eyal Kalderon <ebkalderon@gmail.com>"]
-description = "Data-oriented game engine written in Rust"
-exclude = ["examples/*", "book/*"]
-keywords = ["game", "engine", "sdk", "amethyst"]
-categories = ["game-engines"]
+name = "amethyst_assets"
+version = "0.1.0"
+authors = ["torkleyy <torkleyy@gmail.com>"]
+readme = "README.md"
+description = """
+Asynchronous asset management for games.
+"""
+exclude = ["examples/*"]
+license = "MIT/Apache-2.0"
+keywords = ["game", "asset", "resource", "management", "amethyst"]
+categories = ["filesystem"]
 
 documentation = "https://www.amethyst.rs/doc/master/amethyst"
 homepage = "https://www.amethyst.rs/"
 repository = "https://github.com/amethyst/amethyst"
 
-readme = "README.md"
-license = "MIT OR Apache-2.0"
-
 [badges]
 appveyor = { repository = "amethyst/amethyst", branch = "develop" }
-travis-ci = { repository = "amethyst/amethyst", branch = "develop" }
-
-[features]
-profiler = ["thread_profiler/thread_profiler"]
+travis-ci = { repository = "amethyst/amethyst" }
 
 [dependencies]
-amethyst_assets = { path = "amethyst_assets", version = "0.1.0" }
-amethyst_config = { path = "amethyst_config", version = "0.4.0" }
-amethyst_renderer = { path = "amethyst_renderer", version = "0.5" }
-amethyst_input = { path = "amethyst_input", version = "0.1" }
-cgmath = "0.14"
-cpal = "0.4"
-crossbeam = "0.3"
 derivative = "1.0"
-fnv = "1.0"
+fnv = "1"
 futures = "0.1.14"
-gfx = "0.16"
-genmesh = "0.4"
-imagefmt = "4.0"
-shred = "0.4"
-shrev = "0.5"
+log = "0.3.8"
+parking_lot = "0.4.4"
 rayon = "0.7"
-rodio = "0.5.1"
-specs = "0.9.5"
-ticketed_lock = "0.1"
-wavefront_obj = "5.0"
-winit = "0.7"
-serde = "1"
-
-thread_profiler = { version = "0.1", optional = true }
-
-[dependencies.smallvec]
-version = "0.4.2"
-features = ["serde"]
-
-[build-dependencies]
-vergen = "0.1"
-
-[[example]]
-name = "hello_world"
-path = "examples/00_hello_world/main.rs"
-
-[[example]]
-name = "window"
-path = "examples/01_window/main.rs"
-
-[[example]]
-name = "sphere"
-path = "examples/02_sphere/main.rs"
-
-[[example]]
-name = "renderable"
-path = "examples/03_renderable/main.rs"
-
-[[example]]
-name = "pong"
-path = "examples/04_pong/main.rs"
-
-[[example]]
-name = "assets"
-path = "examples/05_assets/main.rs"
-
-[[example]]
-name = "material"
-path = "examples/06_material/main.rs"
-
-[workspace]
-members = ["amethyst_assets", "amethyst_config", "amethyst_renderer", "amethyst_input"]
+specs = { version = "0.9.5", features = ["common"] }

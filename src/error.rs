@@ -1,53 +1,173 @@
-//! Engine error types.
+use std::error::Error;
+use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
-use std::error::Error as StdError;
-use std::fmt::{Display, Formatter};
-use std::fmt::Result as FmtResult;
-use std::result::Result as StdResult;
+use futures::future::SharedError;
 
-use specs::common::BoxedErr;
+use asset::AssetSpec;
 
-use config::ConfigError;
-
-/// Engine result type.
-pub type Result<T> = StdResult<T, Error>;
-
-/// Common error type.
+/// Error type returned when loading an asset.
+/// Includes the `AssetSpec` and the error (`LoadError`).
 #[derive(Debug)]
-pub enum Error {
-    /// Application error.
-    Application,
-    /// Asset management error.
-    // Asset(AssetError),
-    /// Configuration error.
-    Config(ConfigError),
-    /// System error.
-    System(BoxedErr),
+pub struct AssetError<A, F, S> {
+    /// The specifier of the asset which failed to load
+    pub asset: AssetSpec,
+    /// The error that's been raised.
+    pub error: LoadError<A, F, S>,
 }
 
-impl StdError for Error {
+impl<A, F, S> AssetError<A, F, S> {
+    pub(crate) fn new(asset: AssetSpec, error: LoadError<A, F, S>) -> Self {
+        AssetError { asset, error }
+    }
+}
+
+impl<A, F, S> Display for AssetError<A, F, S>
+where
+    A: Display,
+    F: Display,
+    S: Display,
+{
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+        write!(
+            f,
+            "Failed to load asset \"{}\" of format \"{:?}\" from storage with id \"{}\": {}",
+            &self.asset.name,
+            &self.asset.exts,
+            &self.asset.store.id(),
+            &self.error
+        )
+    }
+}
+
+/// Combined error type which is produced when loading an
+/// asset. This error does not include information which asset
+/// failed to load. For that, please look at `AssetError`.
+#[derive(Clone, Debug)]
+pub enum LoadError<A, F, S> {
+    /// The conversion from data -> asset failed.
+    AssetError(A),
+    /// The conversion from bytes -> data failed.
+    FormatError(F),
+    /// The storage was unable to retrieve the requested data.
+    StorageError(S),
+}
+
+impl<A, F, S> Display for LoadError<A, F, S>
+where
+    A: Display,
+    F: Display,
+    S: Display,
+{
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+        match *self {
+            LoadError::AssetError(ref e) => write!(f, "Failed to load asset: {}", e),
+            LoadError::FormatError(ref e) => write!(f, "Failed to load data: {}", e),
+            LoadError::StorageError(ref e) => write!(f, "Failed to load from storage: {}", e),
+        }
+    }
+}
+
+impl<A, F, S> Error for AssetError<A, F, S>
+where
+    A: Error,
+    F: Error,
+    S: Error,
+{
+    fn description(&self) -> &str {
+        "Failed to load asset"
+    }
+
+    fn cause(&self) -> Option<&Error> {
+        Some(&self.error)
+    }
+}
+
+impl<A, F, S> Error for LoadError<A, F, S>
+where
+    A: Error,
+    F: Error,
+    S: Error,
+{
+    fn cause(&self) -> Option<&Error> {
+        let cause: &Error = match *self {
+            LoadError::AssetError(ref e) => e,
+            LoadError::FormatError(ref e) => e,
+            LoadError::StorageError(ref e) => e,
+        };
+
+        Some(cause)
+    }
+
     fn description(&self) -> &str {
         match *self {
-            Error::Application => "Application error!",
-            Error::Config(_) => "Configuration error!",
-            Error::System(_) => "System error!",
-        }
-    }
-
-    fn cause(&self) -> Option<&StdError> {
-        match *self {
-            Error::Config(ref e) => Some(e),
-            _ => None,
+            LoadError::AssetError(_) => "Failed to load asset",
+            LoadError::FormatError(_) => "Failed to load data",
+            LoadError::StorageError(_) => "Failed to load from storage",
         }
     }
 }
 
-impl Display for Error {
-    fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
-        match *self {
-            Error::Application => write!(fmt, "Application initialization failed!"),
-            Error::Config(ref e) => write!(fmt, "Configuration loading failed: {}", e),
-            Error::System(ref e) => write!(fmt, "System creation failed: {}", e),
-        }
+/// An error type which cannot be instantiated.
+/// Used as a placeholder for associated error types if
+/// something cannot fail.
+#[derive(Debug)]
+pub enum NoError {}
+
+impl Display for NoError {
+    fn fmt(&self, _: &mut Formatter) -> FmtResult {
+        match *self {}
+    }
+}
+
+impl Error for NoError {
+    fn description(&self) -> &str {
+        match *self {}
+    }
+}
+
+
+/// Shared version of error
+pub struct SharedAssetError<E>(SharedError<E>);
+
+impl<E> AsRef<E> for SharedAssetError<E> {
+    fn as_ref(&self) -> &E {
+        &*self.0
+    }
+}
+
+impl<E> Error for SharedAssetError<E>
+where
+    E: Error,
+{
+    fn description(&self) -> &str {
+        self.as_ref().description()
+    }
+
+    fn cause(&self) -> Option<&Error> {
+        self.as_ref().cause()
+    }
+}
+
+impl<E> Debug for SharedAssetError<E>
+where
+    E: Debug,
+{
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+        self.as_ref().fmt(f)
+    }
+}
+
+impl<E> Display for SharedAssetError<E>
+where
+    E: Display,
+{
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+        self.as_ref().fmt(f)
+    }
+}
+
+impl<E> From<SharedError<E>> for SharedAssetError<E> {
+    fn from(err: SharedError<E>) -> Self {
+        SharedAssetError(err)
     }
 }
